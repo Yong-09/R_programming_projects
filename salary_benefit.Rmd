@@ -1,0 +1,277 @@
+---
+title: '**Salary and Benefit Analysis Report**'
+subtitle: "**Final Project**"
+author: "Yongqiao LIANG"
+date: "4/9/2022"
+output:
+  html_document:
+    toc: true                  
+    toc_float: true             
+    number_sections: true      
+    theme: simplex
+  word_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(dplyr)
+library(ggplot2)
+library(lubridate)
+```
+
+# **Introduction**
+Building a good compensation structure ensures effective labor cost distribution and gives competitive salary and benefit for attracting and remaining high quality talents. A compensation strategy that is data-driven and forward-thinking.
+I am going for a job interview Compensation and Benefit Analyst position next Wednesday and I never worked on this field, even though there are some common missions as the other analyst positions.
+Hence, for well preparing interview questions, I'd like to take advantage of this project and choose compensation data set to analyze and have more particular knowledge into it.
+
+
+# **Presentation and description of the problem**
+## Research questions
+The purpose of analyzing the data set is to measure whether the compensation system is healthy. Data set doesn't contain any external data about salary benchmarking, sale volume and key performance indicators of employees, I will follow the internal  
+
+1. The latest compensation component proportion
+  +. Salary and Benefit main component weight
+  +. Department labor cost weight
+ 
+  
+2. Labor cost distribution analysis
+  +. Job Family labor cost weight by top 3 Departments
+  +. Top 5 Job family labor cost distribution analysis
+  
+3. salary further tendency 
+  +. total compensation from 2013 to 2020 by line chart
+  +. total Compensation prediction by unary linear regression
+  
+  
+```{r pressure, echo=FALSE}
+rawdata <- read_csv("/Users/LYQ/Desktop/Employee_Salary_Compensation.csv")
+rawdata
+```
+
+# **Presentation of the data**
+## Usability of the dataset
+The csv file "Employee_Salary_Compensation" has been collected in Kaggle due to its association,complexity, long time span and clear interpretation of each variables. 
+The high download per view ratio (11%) and usability score (9.41) in Kaggle also indicates its availability. There were 2 contributors who used it and worked in compensation prediction with python. 
+
+## Description of dataset
+The csv file "Employee_Salary_Compensation" is a data set about salary and benefit of San Francisco Controller's Office from 2013 to 2020, containing 22 columns and 678524 rows.
+
+ 1. **Organization Group Code**: Org Group is a group of Departments. For example, the Public Protection Org Group includes departments such as the Police, Fire, Adult Probation, District Attorney, and Sheriff.
+ 2. **Job Family Code**: Job Family combines similar Jobs into meaningful groups.
+ 3. **Job Code**: Jobs are defined by the Human Resources classification unit. Examples include gardeners, police officers, and accountants.
+ 4. **Year Type**: Fiscal (July through June) or Calendar (January through December)
+ 5. **Year**: An accounting period of 12 months. The City and County of San Francisco operate on a fiscal year that begins on July 1 and ends on June 30 the following year. The Fiscal Year ending June 30, 2012, is represented as FY2011-2012.
+ 6. **Organization Group**: Org Group is a group of Departments. For example, the Public Protection Org Group includes departments such as the Police, Fire, Adult Probation, District Attorney, and Sheriff.
+ 7. **Department Code**: Departments are the primary organizational unit used by the City and County of San Francisco. Examples include Recreation and Parks, Public Works, and the Police Department.
+ 8. **Department**: Departments are the primary organizational unit used by the City and County of San Francisco. Examples include Recreation and Parks, Public Works, and the Police Department.
+ 9. **Union Code**: Unions represent employees in collective bargaining agreements. A job belongs to one union, although some jobs are unrepresented (usually temporarily).
+ 10. **Union**: Unions represent employees in collective bargaining agreements. A job belongs to one union, although some jobs are unrepresented (usually temporarily).
+ 11. **Job Family**: Job Family combines similar Jobs into meaningful groups.
+ 12. **Job**: Jobs are defined by the Human Resources classification unit. Examples include gardeners, police officers, and accountants.
+ 13. **Employee Identifier**: Each distinct number in the “Employee Identifier” column represents one employee. These identifying numbers are not meaningful but rather are randomly assigned for the purpose of building this dataset. Employee ID has been included here to allow users to reconstruct the original report. Note that each employee’s identifier will change each time this dataset is updated, so comparisons by employee across multiple versions of the dataset are not possible.
+ 14. **Salaries**: Normal salaries paid to permanent or temporary City employees.
+ 15. **Overtime**: Amounts paid to City employees working in excess of 40 hours per week.
+ 16. **Other Salaries**: Various irregular payments made to City employees including premium pay, incentive pay, or other one-time payments.
+ 17. **Total Salary**: The sum of all salaries paid to City employees.
+ 18. **Retirement**: City contributions to employee retirement plans.
+ 19. **Health and Dental**: City-paid premiums to health and dental insurance plans covering City employees. To protect confidentiality as legally required, pro-rated citywide averages are presented in lieu of employee-specific health and dental benefits.
+ 20. **Other Benefits**: Mandatory benefits paid on behalf of employees, such as Social Security (FICA and Medicare) contributions, unemployment insurance premiums, and minor discretionary benefits not included in the above categories.
+ 21. **Total Benefits**: The sum of all benefits paid to City employees.
+ 22. **Total Compensation**: The sum of all salaries and benefits paid to City employees.
+ 
+ The columns are reordered and arrange code and name column together to better understand.
+```{r}
+salary <-rawdata %>% select(c(1,6,7,8,9,10,2,11,3,12,4,5,13:22))
+salary
+```
+
+# **Exploratory data analysis**
+## The latest compensation component proportion
+Under the context of organization 01 Public Protection in 2020,
+-	Salary and Benefit from Total compensation
+
+`Total Compensation` is composed of `Total Salary` and `Total Benefits`, occupied 73.51% and 26.49% respectively. It shows that total compensation mainly comes from salary. 
+
+```{r}
+prop_2020 <- salary %>% 
+            select(`Year`,`Total Salary`,`Total Benefits`,`Total Compensation`) %>%
+            dplyr::filter(`Year`== 2020) %>%
+            mutate(global_salary_by_compen=round(`Total Salary`/`Total Compensation`,2)) %>%
+            mutate(global_benefits_by_compen=round(`Total Benefits`/`Total Compensation`,2))
+
+mean(prop_2020$global_salary_by_compen,na.rm=T)
+mean(prop_2020$global_benefits_by_compen,na.rm=T)
+```
+
+## Salaries, Overtime and Other salaries from Total Salary
+`Salaries`, `Overtime`, `Other salaries` constitute `Total Salary` and occupied 84.08%, 10.29% and 6.17% respectively. We can see that `Salaries` has the largest proportion in `Total Salary` and `Other salaries` has taken the smallest proportion. 
+The total of percentage is around 98.45% and less than 1 due to NAs. 
+
+```{r}
+## Salary Composition by total salary
+# Salaries
+salary_by_total_salary <- salary %>% 
+            select(`Organization Group Code`,Year,`Total Salary`,`Salaries`) %>%
+            dplyr::filter(`Year`== 2020) %>%
+            dplyr::filter(`Salaries`>`Total Salary`) %>%
+            dplyr::filter(`Organization Group Code`=="01") %>%
+            mutate(salary_by_total_salary=abs(`Salaries`)/abs(`Total Salary`))
+mean(salary_by_total_salary$salary_by_total_salary,na.rm=T)
+
+# Overtime
+overtime_by_total_salary <- salary %>% 
+            select(`Organization Group Code`,`Year`,`Total Salary`,`Overtime`) %>%
+            dplyr::filter(`Year`== 2020) %>% 
+            dplyr::filter(`Organization Group Code`=="01") %>%
+            mutate(overtime_by_total_salary=abs(`Overtime`)/abs(`Total Salary`))
+mean(overtime_by_total_salary$overtime_by_total_salary,na.rm=T)
+# other salaries
+other_by_total_salary <- salary %>% 
+            select(`Organization Group Code`,`Year`,`Total Salary`,`Other Salaries`) %>%
+            dplyr::filter(`Year`== 2020) %>%
+            dplyr::filter(`Organization Group Code`=="01") %>%
+            dplyr::filter(`Other Salaries`<`Total Salary`) %>%
+            mutate(overtime_by_total_salary=abs(`Other Salaries`)/abs(`Total Salary`))
+mean(other_by_total_salary$overtime_by_total_salary,na.rm=T)
+```
+
+## Retirement, health & dental and Other benefits from Total Benefits
+`Retirement`, `Health & Dental`, `Other Benefits` constitute `Total Benefit` and occupied 53.39%, 32.72% and 13.90% respectively. We can see that `Retirement` has the largest proportion in `Total Benefit` and `Other benefits` has taken the smallest proportion. 
+The total of percentage is around 80.71% and less than 1 due to NAs. 
+
+```{r}
+# retirement
+retiremt_by_total_benefit <- salary %>%
+  select(`Organization Group Code`, Year, Retirement,`Total Benefits`) %>%
+  dplyr::filter(`Year`== 2020) %>%
+  dplyr::filter(`Organization Group Code`=="01") %>%
+  mutate(retiremt_by_total_benefit=abs(`Retirement`)/abs(`Total Benefits`))
+mean(retiremt_by_total_benefit$retiremt_by_total_benefit,na.rm=T)
+
+# health & dental 
+health_by_total_benefit <- salary %>%
+  select(`Organization Group Code`, Year, `Health and Dental`,`Total Benefits`) %>%
+  dplyr::filter(`Year`== 2020) %>%
+  dplyr::filter(`Organization Group Code`=="01") %>%
+  mutate(health_by_total_benefit=abs(`Health and Dental`)/abs(`Total Benefits`))
+mean(health_by_total_benefit$health_by_total_benefit,na.rm=T)
+
+# other benefits
+other_by_total_benefit <- salary %>%
+  select(`Organization Group Code`, Year, `Other Benefits`,`Total Benefits`) %>%
+  dplyr::filter(`Year`== 2020) %>%
+  dplyr::filter(`Organization Group Code`=="01") %>%
+  mutate(other_by_total_benefit=abs(`Other Benefits`)/abs(`Total Benefits`))
+mean(other_by_total_benefit$other_by_total_benefit,na.rm=T)
+```
+
+
+## The most labor cost weighted department 
+In organization Public Protection, the top 3 weighted departments are Police, Fire Department and Sheriff that have taken respectively 40.05%, 26.47% and 14.79%.
+Department of Police Accountability has the fewest because of the lowest number of employees.
+
+```{r}
+# Organization 01
+condition_table1 <- salary %>%
+      dplyr::filter(Year=="2020") %>%
+      dplyr::filter(`Organization Group Code`=="01")
+
+depart_compen_prop <- 
+  aggregate(condition_table1$`Total Compensation`, by=list(department=condition_table1$Department),sum)
+
+numberofEachDepart <- salary %>%
+   dplyr::filter(Year=="2020") %>%
+   dplyr::filter(`Organization Group Code`=="01") %>%
+   group_by(Department) %>%
+   summarise(numberofRow=n())
+arrange(numberofEachDepart,desc(numberofRow))
+depart_compen_prop$Deprt_by_total <- round(prop.table(depart_compen_prop$x),4)
+arrange(depart_compen_prop,desc(Deprt_by_total))
+
+```
+## Job Family labor cost weight by top 3 Departments
+Among three most weighted departments, the table below shows the 6 job families, and it orders from the largest to smallest. The Police services from Police department occupied 41.09% because it has the largest number of employees; Fire service occupied 31.18% as the same reason. The Protection & Apprehension and Management and Airport Operation just occupied less than 5%. 
+
+```{r}
+condition_table2 <- condition_table1 %>%
+  select(`Organization Group Code`,Year,`Job Family Code`,`Job Family` ,`Total Compensation`,Department) %>%
+  dplyr::filter(Year=="2020") %>%
+  dplyr::filter(`Organization Group Code`=="01") %>%
+  dplyr::filter(Department =="Police" |Department=="Fire Department" |Department== "Sheriff")
+
+jobF_compen_prop <- 
+  aggregate(condition_table2$`Total Compensation`, by=list(jobF_code=condition_table2$`Job Family Code`,jobF=condition_table2$`Job Family`),sum)
+jobF_compen_prop$JobF_by_total <- round(prop.table(jobF_compen_prop$x),4)
+head(arrange(jobF_compen_prop,desc(JobF_by_total),5))
+  
+```
+# **Visualization of the data**
+## compensation distribition reasonability verification
+From the table of “Job family labor cost by total compensation”, I used box plot to shows the distribution containing outliers, median, maximum, and minimum compensation distribution for the 6 job families of 3 key departments Police, Fire Department and Sheriff in organization 01 in 2020. 
+Job family `Management` hasn’t any outliers and the median of compensation is the highest. The job family `Airport Operation` has taken the lowest total compensation percentage and median of compensation is lowest compared with the other job families. The job family `Correction & Detention` has the most outliers and disperses in wide range. It shows that `Correction & Detention` may have long position hierarchy with different level of senior positions that cause a wide range of compensation. In one way, it may create a heavy and slow information system; another side, it may create an unfair feeling for the other employees with same position.
+
+```{r}
+condition_table3 <- salary %>%
+  dplyr::filter(`Job Family Code`=="Q000"|`Job Family Code`=="H000"|
+                `Job Family Code`=="8300" |
+                `Job Family Code`=="9200"|`Job Family Code`=="0900") %>%
+  dplyr::filter(Year=="2020") %>%
+  dplyr::filter(`Organization Group Code`=="01") %>%
+  dplyr::filter(Department =="Police" |Department=="Fire Department" |Department== "Sheriff")
+
+ggplot(condition_table3, mapping=aes(x=`Job Family`,y=`Total Compensation`,options(scipen=200))) +
+  geom_boxplot(color = "firebrick", shape = "diamond", size = 2,outlier.colour="black") +
+  labs(title="Top 5 Job Family Total Compensation Boxplot",x = "Job Family", y = "Total Compensation") +
+  scale_color_manual(values=c("#999999", "#E69F00", "#56B4E9"))
+```
+
+## Total Compensation Tendency from 2013 to 2020
+```{r}
+total_compen_13to20 <- aggregate(salary$`Total Compensation`,by=list(salary$Year),sum)
+ggplot(total_compen_13to20,mapping=aes(x=`Group.1`,y=x,group=1))+
+  geom_line(linetype = "dashed",color="red")+
+  geom_point() +
+  labs(title="Line graph total compensation trend from 2013 to 2020",x = "Year", y = "Total Compensation")
+  
+```
+
+
+## Total Compensation forecasting by unary linear regression
+I used linear regression function to visualize it and predict the total compensation of 2021. The linear regression formula I got is:
+ y=(4.808e+11)x-9.603e+11
+
+In 2021, according to formula, total compensation is equal to 10 941 205 638.
+
+I used ggplot2 to plot the linear regression into graph below and we can see that the blue line represents a predictive line, and the black dots are the value of real total compensation. The black dots are very closed to the blue line, even it overlaps.  Obviously, the linear model has high accuracy for predicting the further years total compensation. 
+
+```{r}
+relation <- lm(x~Group.1,total_compen_13to20)
+relation
+new <- data.frame(Group.1=c(2020))
+pre <- predict(relation,new)
+pre
+ggplot(data=relation,aes(x=Group.1,y=x)) +
+  geom_point() +
+  stat_smooth(method="lm") +
+  theme(panel.background=element_rect(fill="white"),
+                                      axis.line.x=element_line(),
+                                      axis.line.y=element_line()) +
+  ggtitle("Linear Model Fitted to Data") +
+  labs(x = "Year", y = "Total Compensation")
+```
+
+# **Interpretation/Conclusion**
+In 2020, Organization Public Protection’s 2 main expended components of total compensation are salary and retirement. And the 3 key departments Police, Fire Department and Sheriff occupied the most compensation and number of employees.
+
+Among these 3 departments, Police services, fire services and Correction & Detection are the 3 main job services and weighted the most of total compensation. In other word, we can say that police services, fire services and correction & detection most need manpower. 
+
+From the perspective of salary compensation, these 3 services have similar median compensation, no matter the highest or lowest compensation. However, from the salary distribution of Correction & Detection, it has various compensation level for different positions, and it may cause unfair salary system within service and non-structural hierarchy. I suggest adjusting the service position structure for flat management.
+
+San Francisco Controller’s Office has steady and healthy operating situation reflecting on the growth employee number and total compensation growth trend. The total compensation in 2021 probably will reach $10,941,205,638. The human resource department and financial department should notice and prepare in advance. 
+
+# **References**
+The data set is found from the link below:
+
+**(https://www.kaggle.com/datasets/siddheshera/san-francisco-employee-salary-compensation)**
+
