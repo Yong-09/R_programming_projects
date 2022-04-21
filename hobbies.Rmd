@@ -1,0 +1,125 @@
+---
+title: 'project'
+author: "Antony"
+date: "4/10/2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = F, warning = F)
+```
+
+
+# 1) Introduction:
+The dataset contains 18 variables (9 booleans, 5 strings and 4 decimals). In machine learning projects, "HeartDisease" can be used as the explonatory variable, but note that the classes are heavily unbalanced.
+It consists of 401,958 rows and 279 columns. The vast majority of columns are questions asked to respondents about their health status, such as "Do you have serious difficulty walking or climbing stairs?" or "Have you smoked at least 100 cigarettes in your entire life? [Note: 5 packs = 100 cigarettes]". In this dataset, I noticed many different factors (questions) that directly or indirectly influence heart disease, so I decided to select the most relevant variables from it and do some cleaning so that it would be usable for machine learning projects.
+# 2) Presentation and description of the problem:
+The problem we are trying to address here is to find the relation between a dependent variable and multiple independent variable and we are using linear regression to nderstand the distribution of the data and predict a future value
+
+# 3) Presentation of the data:
+As described above, the original dataset of nearly 300 variables was reduced to just about 20 variables.variable "HeartDisease" as a binary ("Yes" - respondent had heart disease; "No" - respondent had no heart disease). But note that classes are not balanced, so the classic model application approach is not advisable. 
+
+# 4) Exploratory data analysis and visualisation of the data:
+
+The elaborate descriptive statistics have been perfoemed in order to understand the freq, std, and other statistical properties. Also the error genereated during linear regression is assumed to have the same variance for the model to hold good 
+
+# Installing the required packages
+
+```{r}
+library(tidyverse)
+library(Hmisc)
+library(ggpubr)
+library(lattice)
+
+#Reading the CSV file into the dataset
+heartData <- read_csv("dd.csv")
+heartData
+```
+
+# Make syntactically valid names out of character vectors from the given dataset
+```{r}
+names(heartData) <- make.names(names(heartData), unique=TRUE)
+heartData
+head(heartData)
+```
+
+#This gives us an outline of the dataset in each coloumn in addition to the coloumn type
+```{r}
+names(heartData) <- gsub("[[:space:]+]", "_", names(heartData))
+str(heartData)
+```
+
+*Since we want to use linear regression to predict the possibility of a heart disease happening, we are transforming the given dependent variable to a binary class variable*
+```{r}
+heartData <- type_convert(heartData)
+
+```
+
+* This function is used to find out the correlation of the different coloums with each other in order to understand which variable influences the dependent variable the most*
+```{r}
+t(heartData)
+describe(heartData)
+
+cor(heartData$BMI,heartData$HeartDisease, method = "pearson")
+```
+
+# Here we try to calculate the statistical properties of the presented data in particular the varibles which influence the dependent variable the most
+```{r}
+heartData %>%
+  group_by(HeartDisease) %>%
+  summarise(averageBMI = mean(BMI),
+            sdBMI = sd(BMI))
+
+heartData %>%
+  group_by(HeartDisease) %>%
+  summarise(averageAgeCategory = mean(AgeCategory),
+            sdAgeCategory = sd(AgeCategory))
+```
+# #We try to plot the Heartdisease on the X axis and the BMI coloumn on the Y Axis
+
+```{r}
+ggplot(heartData, aes(x= HeartDisease, y = BMI)) + 
+  geom_point() + 
+  geom_jitter() +
+  geom_smooth(method = 'lm')
+```
+# This gives us a good understanding of the Quartile ranges of the presented values
+
+```{r}
+gplot(heartData, aes(x= HeartDisease, y = BMI)) + 
+  geom_point() + 
+  geom_jitter() +
+  geom_smooth(method = 'lm')
+```
+# This gives us a good understanding of the Quartile ranges of the presented values
+```{r}
+boxplot(heartData$BMI)
+boxplot(heartData$AgeCategory)
+
+```
+
+#We are converting the dependent variable data type from character to numeric along with transforming the binary categorical to binary discrete numeric
+```{r}
+heartData$HeartDisease<-ifelse(heartData$HeartDisease=="Yes",1,0)
+transform(heartData, HeartDisease = as.numeric(HeartDisease))
+```
+
+
+```{r}
+#After this we run the linear regression analysis which shows the y intercept and the slope
+model <- lm(BMI ~ HeartDisease, data = heartData)
+model  
+
+```
+
+
+
+# 5)Interpretation / Conclusion:
+As conclusion we understand the relation between each independent varible and how closely it is associated with the dependent variable. The test of Linear regression gives us a models wherein we can predict the next possible occurence of the heart disease. Nonetheless, once we have this, we then try to find F test value for the hypothesis testing and individual p value which will give us the measure of well the model fits. After this we then calculte error of standard residuals and then plot against  a predicted y hat which will give us the models fit. But the parts after the linear regression is omitted due to unfit in the scope of this particular project. 
+
+#6)References:
+
+ https://www.kaggle.com/datasets/kamilpytlak/personal-key-indicators-of-heart-disease
+ https://www.datacamp.com/community/tutorials/linear-regression-R
+ https://stackoverflow.com/questions/2288485/how-to-convert-a-data-frame-column-to-numeric-type
+
