@@ -1,0 +1,86 @@
+---
+title: "Cars"
+author: "LIANG"
+date: "3/30/2022"
+output: 
+  html_document:
+    toc: yes
+    toc_float: yes
+    toc_depth: 6
+    df_print: paged
+    theme: paper
+    number_of_section: yes
+    hightlight: kate
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning=F, error=F, messages=F)
+carsDF <- read.csv("/Users/LYQ/Desktop/cars.csv")
+carsDF
+library(dplyr)
+library(ggplot2)
+```
+
+## **Import Dataset**
+Import Cars.csv into carsDF variable
+```{r cars}
+carsDF <- read.csv("/Users/LYQ/Desktop/cars.csv")
+carsDF
+```
+
+
+## **First 5 cars**
+Question: With tidyverse approach, show the name of the first 5 cars by the number of appearances in the dataset.
+
+
+Answer: Opel_Corsa, BMW_118d_DPF, Peugeot_206,BMW_320d_touring and Opel_Corsa_1.2_16V are the first 5 cars that has the highest numbers of appearances in the dataset. 
+```{r}
+NameFreq <- carsDF %>%
+  group_by(name) %>%
+  summarise(numberofRow=n()) %>%
+  arrange(desc(numberofRow))
+head(NameFreq,5)
+```
+
+
+## **New column**
+To the dataframe carsDF add a new column called WeekDay_lastseen. WeekDay_lastseen column should store the full name of date from lastSeen Column! 
+```{r}
+library(lubridate)
+Sys.setlocale("LC_TIME", "en_US.UTF-8")
+carsDF <- carsDF %>%
+  mutate(WeekDay_lastseen=wday(lastSeen, abbr=F, label=T))
+head(carsDF$WeekDay_lastseen)
+```
+
+
+## **Number of Saturday cars**
+How many cars were last seen on Saturday?
+There are 74 cars last seen on Saturday.
+```{r}
+car_weekday <- carsDF %>%
+  group_by(WeekDay_lastseen) %>%
+  summarise(numberofWeekdayRow=n())
+car_weekday
+car_weekday$numberofWeekdayRow[car_weekday$WeekDay_lastseen=="Saturday"]
+```
+
+
+## **Scatterplot**
+With carsDF dataframe create a scatterplot in ggplot2 (10)
+```{r}
+unique(carsDF$gearbox)
+
+scatter_plot <- dplyr::filter(carsDF,gearbox=="manuell" | gearbox=="automatik")
+
+ggplot(data=scatter_plot,mapping = aes(x=price,y=powerPS))+
+   geom_point()+
+  labs(title="Scatter Plot") +
+  scale_x_log10() +
+  scale_y_log10() +
+  geom_density_2d() +
+  facet_wrap(~ gearbox)
+```
+
+
+

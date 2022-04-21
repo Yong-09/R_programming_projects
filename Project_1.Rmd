@@ -1,0 +1,130 @@
+---
+title: '**Chicago_small**'
+subtitle: "**How To Manupilate Data**"
+author: "LIANG"
+date: "3/8/2022"
+output: 
+  html_document:
+    toc: yes
+    toc_float: yes
+    toc_depth: 6
+    df_print: paged
+    number_of_section: yes
+    hightlight: kate
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# **Question for task 1**
+
+show first 10 rows and first 5 columns. How many rows and columns does the dataframe have? Remove the Ward and ID columns and store data to a chicago variable! Rename column Domestic to Home!
+
+## **Task 1-- 10 rows, 5 columns**
+The 1st dataframe one shows first 10 rows and first 5 columns before removing Ward and ID columns. 
+```{r}
+library(readxl)
+library(tidyverse)
+library(dplyr)
+chicago <- read_excel("/Users/LYQ/Desktop/Chicago_small.xlsx")
+chicago[1:10,1:5]
+```
+
+## **Task 1-- number of rows and columns**
+The "dim" function shows that there are 200 rows and 11 columns in chicago dataframe.
+```{r}
+dim(chicago)
+```
+
+## **Task 1-- Droping columns**
+After removing "Ward" and "ID" column, it created a new data frame named "chicago.rm" and the colnames's result shows it left 9 rather than 11 columns.
+```{r}
+chicago.rm <- chicago[-c(1,10)]
+colnames(chicago.rm)
+```
+## **Task 1-- Rename column**
+The column "Domestic" is renamed to "Home".
+```{r}
+names(chicago.rm)[names(chicago.rm)== "Domestic"] <- "Home"
+colnames(chicago.rm)
+```
+
+# **Question for task 2**
+
+Split the column Date to Date and Time vectors and transform the Date vector to date type and Time vector to time type (neglect AM/PM). Calculate the average number of days between today's date and dates in Date vector! Which day of week appears the most frequently?
+
+## **Task 2-- split and merge**
+I used separate function to split "Date" column by space to "Date" and "Time" and name it to "chicago.date".
+```{r}
+library(lubridate)
+chicago.date <- chicago.rm %>% mutate(
+  separate(chicago.rm, Date, c("Date","Time"),sep=" ", remove = F))
+head(chicago.date) 
+```
+
+
+## **Task 2-- Time and Date data type**
+I used as.Date and hms to transfer "Date" and "Time"'s data type to time type.
+The "Time" column is located on the last column.
+```{r}
+chicago.date <- chicago.date %>% 
+  mutate(Date= as.Date(Date,format="%m/%d/%Y")) %>%
+  mutate(Time= hms(Time))
+head(chicago.date)
+```
+## **Task 2-- date calculation**
+The average number of days is 2783.275 days. 
+```{r}
+Today <- Sys.Date()
+gap <-difftime(Today,chicago.date$Date,units="days")
+avrageDayNumber <- mean(gap)
+avrageDayNumber 
+```
+
+## **Task 2-- date frequency**
+The most frequently day of week is Saturday based on the "table" function's result, it appears 37 times. 
+```{r}
+Sys.setlocale("LC_TIME", "en_US.UTF-8") # change local system time language to English
+chi.wday <- wday(chicago.date$Date,label = T,abbr=F)
+table(chi.wday)
+#summary(chi.wday)
+```
+
+
+
+
+# **Question for task 3**
+Write a user defined function called AverageVowels, which will calculate the average number of vowels per input string (number of vowels/the length of the input string rounded to 2 decimal places). You should check that the input parameter is string.
+
+## **Task 3-- My function**
+I defined that vowels letters are aeiou in the 1st step, and started ”function" function to process. 
+Within this function, I identify the input if it is character or not, if not, the input will come to "Not here"; if the input is character, and it will keep calculating how many vowels it has and how many letters it has. In the following step, it returns the result about vowels numbers dividing the length of the word and gets the average vowels number. 
+
+For example, I put "Thanks" as input. "Thanks" is character and it has 1 vowel and 6 letters, so the result is 1/6.
+"Myname" is also character and it has 2 vowels and 6 letters, so the result is 1/3.
+109 is not character but numeric, so the output is "Not here".
+
+```{r}
+Vowels <- c("a","e","i","o","u")
+AverageVowels <- function(x){
+  if (class(x) == "character")
+  {
+  x <-tolower(x)
+  number_Vowels <- sum(str_count(x, Vowels))
+  len_word <- nchar(x)
+  result <- round(number_Vowels/len_word,2)
+  return(result)
+  } 
+  else if (class(x) != "charater")
+  return("Not here")
+}
+AverageVowels("John")
+AverageVowels("Jim")
+AverageVowels("Eugene")
+AverageVowels(109)
+
+#nchar(gsub("[^aeiou]","",x))
+```
+
+
